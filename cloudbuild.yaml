@@ -48,7 +48,7 @@ steps:
       '--timeout', '300',
       '--set-env-vars', 'ENVIRONMENT=production',
       '--set-env-vars', 'VERSION=${SHORT_SHA}',
-      '--set-env-vars', 'BUILD_TIME=${BUILD_TIMESTAMP}',
+      '--set-env-vars', 'BUILD_TIME=${BUILD_ID}',
       '--execution-environment', 'gen2',
       '--cpu-throttling',
       '--session-affinity'
