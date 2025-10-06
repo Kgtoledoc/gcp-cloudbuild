@@ -55,6 +55,11 @@ $ curl http://34.54.31.169 | head -10
 
 ## 🏗️ Arquitectura Desplegada
 
+### **Diagrama de Arquitectura Completa**
+![Arquitectura del Sistema](results/architecture.png)
+
+*Diagrama que muestra el flujo completo desde GitHub hasta Cloud Run, incluyendo controles de seguridad en cada etapa.*
+
 ### **Recursos de GCP Creados**
 
 #### **Cloud Run Service**

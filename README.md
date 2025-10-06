@@ -6,6 +6,10 @@ Este proyecto implementa una aplicación web completa en Google Cloud Platform (
 
 ## 🏗️ Arquitectura Implementada
 
+### **Diagrama de Arquitectura Completa**
+![Arquitectura del Sistema](results/architecture.png)
+
+### **Flujo de Datos Simplificado**
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   GitHub Repo   │───▶│   Cloud Build    │───▶│  Artifact Reg.  │
@@ -18,6 +22,12 @@ Este proyecto implementa una aplicación web completa en Google Cloud Platform (
 │ (Security WAF)  │    │   (HTTP/HTTPS)   │    │  (Web App)      │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
+
+### **Componentes de Seguridad Integrados**
+- **🔒 Cloud Armor**: Web Application Firewall (WAF) que protege el tráfico
+- **🛡️ IAM**: Control de acceso basado en roles para todos los servicios
+- **🌐 Network Policies**: Políticas de red para restringir el tráfico
+- **📊 Security Controls**: Controles de seguridad en CI/CD y deployment
 
 ## 🛠️ Componentes Implementados
 
@@ -111,9 +121,10 @@ poc2/
 ├── .gitignore           # Archivos ignorados por Git
 ├── README.md            # Esta documentación
 └── results/             # Evidencias y capturas
-    ├── app-cloud-build.png
-    ├── armor-block.png
-    └── armor.png
+    ├── architecture.png      # Diagrama de arquitectura completa
+    ├── app-cloud-build.png   # Pipeline de Cloud Build
+    ├── armor-block.png       # Bloqueo de IP por Cloud Armor
+    └── armor.png             # Configuración de Cloud Armor
 ```
 
 ## 🚀 Instrucciones de Despliegue
