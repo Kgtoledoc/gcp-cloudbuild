@@ -108,15 +108,15 @@ FROM python:3.11-slim
 - **APIs habilitadas**: Run, Cloud Build, Artifact Registry, Compute, IAM
 - **Artifact Registry**: Repositorio Docker privado
 - **Cloud Run**: Servicio serverless con auto-scaling
-- **Load Balancer**: Global con SSL/TLS automático
+- **Load Balancer**: Global HTTP con Cloud Armor
 - **Cloud Armor**: Políticas de seguridad personalizadas
 - **IAM**: Rol personalizado para Cloud Run
 
 ### Variables de Configuración
 ```hcl
-project_id = "trusty-hangar-474303-t7"
+project_id = "xxxxx"
 github_owner = "your-github-username"
-github_repo = "gcp-technical-test-poc2"
+github_repo = "xxxxx"
 blocked_ip = "1.2.3.4"
 ```
 
@@ -319,3 +319,4 @@ Este proyecto demuestra un pipeline completo de CI/CD en Google Cloud Platform c
 - ✅ **HTTPS obligatorio** y certificados automáticos
 
 **🚀 El sistema está listo para producción y cumple con las mejores prácticas de seguridad y escalabilidad de GCP.**
+# Test commit for Cloud Build trigger

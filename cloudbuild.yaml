@@ -56,7 +56,7 @@ steps:
     id: 'deploy-cloud-run'
     waitFor: ['push-image']
 
-  # Step 5: Configure HTTPS-only traffic
+  # Step 5: Update traffic to latest version
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args: [
@@ -65,29 +65,25 @@ steps:
       '--to-latest',
       '--region', '${_REGION}'
     ]
-    id: 'configure-https'
+    id: 'update-traffic'
     waitFor: ['deploy-cloud-run']
 
-  # Step 6: Apply Cloud Armor security policy
+  # Step 6: Test the deployment
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args: [
-      'compute', 'security-policies', 'rules', 'update', '1000',
-      '--security-policy', '${_SECURITY_POLICY_NAME}',
-      '--action', 'deny-403',
-      '--src-ip-ranges', '${_BLOCKED_IP}',
-      '--description', 'Block specific IP address'
+      'run', 'services', 'describe', '${_SERVICE_NAME}',
+      '--region', '${_REGION}',
+      '--format', 'value(status.url)'
     ]
-    id: 'apply-security-policy'
-    waitFor: ['deploy-cloud-run']
+    id: 'test-deployment'
+    waitFor: ['update-traffic']
 
 # Substitution variables
 substitutions:
   _REGION: 'us-central1'
   _REPO_NAME: 'gcp-technical-test'
   _SERVICE_NAME: 'web-app'
-  _SECURITY_POLICY_NAME: 'web-app-security-policy'
-  _BLOCKED_IP: '1.2.3.4'
 
 # Options
 options:

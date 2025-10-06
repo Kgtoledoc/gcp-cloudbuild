@@ -138,6 +138,8 @@ jspm_packages/
 # DynamoDB Local files
 .dynamodb/
 
+# Service account
+service-account.json
 # TernJS port file
 .tern-port
 

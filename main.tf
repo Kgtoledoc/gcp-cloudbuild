@@ -1,5 +1,5 @@
 # GCP Technical Test - Escenario 3: CI/CD with Cloud Build and Cloud Run
-# Infrastructure as Code with Terraform
+# Simplified version to fix Cloud Armor and Docker image issues
 
 terraform {
   required_version = ">= 1.0"
@@ -15,6 +15,7 @@ terraform {
 provider "google" {
   project = var.project_id
   region  = var.region
+  credentials = file("service-account.json")
 }
 
 # Variables
@@ -41,18 +42,14 @@ variable "blocked_ip" {
   default     = "1.2.3.4"
 }
 
-# Enable required APIs
-resource "google_project_service" "required_apis" {
-  for_each = toset([
-    "run.googleapis.com",
-    "cloudbuild.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "compute.googleapis.com",
-    "iam.googleapis.com"
-  ])
-  
-  service = each.value
-  disable_on_destroy = false
+variable "github_owner" {
+  description = "GitHub repository owner"
+  type        = string
+}
+
+variable "github_repo" {
+  description = "GitHub repository name"
+  type        = string
 }
 
 # Create Artifact Registry repository
@@ -61,36 +58,6 @@ resource "google_artifact_registry_repository" "web_app_repo" {
   repository_id = "gcp-technical-test"
   description   = "Docker repository for GCP Technical Test web application"
   format        = "DOCKER"
-
-  depends_on = [google_project_service.required_apis]
-}
-
-# Create custom IAM role for Cloud Run management
-resource "google_project_iam_custom_role" "cloud_run_admin" {
-  role_id     = "cloudRunAdmin"
-  title       = "Cloud Run Admin"
-  description = "Custom role for managing Cloud Run services only"
-  
-  permissions = [
-    "run.services.create",
-    "run.services.get",
-    "run.services.list",
-    "run.services.update",
-    "run.services.delete",
-    "run.services.getIamPolicy",
-    "run.services.setIamPolicy",
-    "run.operations.get",
-    "run.operations.list",
-    "run.locations.list",
-    "run.revisions.get",
-    "run.revisions.list",
-    "run.configurations.get",
-    "run.configurations.list",
-    "run.routes.get",
-    "run.routes.list"
-  ]
-
-  depends_on = [google_project_service.required_apis]
 }
 
 # Create service account for Cloud Build
@@ -114,14 +81,15 @@ resource "google_project_iam_member" "cloud_build_permissions" {
   member  = "serviceAccount:${google_service_account.cloud_build_sa.email}"
 }
 
-# Create Cloud Run service
+# Create Cloud Run service (without image initially)
 resource "google_cloud_run_v2_service" "web_app" {
   name     = "web-app"
   location = var.region
 
   template {
     containers {
-      image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.web_app_repo.repository_id}/web-app:latest"
+      # Use a placeholder image initially
+      image = "gcr.io/cloudrun/hello"
       
       ports {
         container_port = 8080
@@ -158,11 +126,6 @@ resource "google_cloud_run_v2_service" "web_app" {
     percent = 100
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
   }
-
-  depends_on = [
-    google_project_service.required_apis,
-    google_artifact_registry_repository.web_app_repo
-  ]
 }
 
 # Allow unauthenticated access to Cloud Run service
@@ -173,7 +136,7 @@ resource "google_cloud_run_service_iam_member" "public_access" {
   member   = "allUsers"
 }
 
-# Create Cloud Armor security policy
+# Create simplified Cloud Armor security policy
 resource "google_compute_security_policy" "web_app_security" {
   name = "web-app-security-policy"
   description = "Security policy for GCP Technical Test web application"
@@ -203,73 +166,6 @@ resource "google_compute_security_policy" "web_app_security" {
     }
     description = "Block IP address ${var.blocked_ip}"
   }
-
-  # Rule to block common attack patterns
-  rule {
-    action   = "deny(403)"
-    priority = "1001"
-    match {
-      expr {
-        expression = "request.path.matches('/\\.\\./') || request.path.matches('/\\.\\.%2f') || request.path.matches('/%2e%2e/')"
-      }
-    }
-    description = "Block path traversal attempts"
-  }
-
-  # Rule to block suspicious user agents
-  rule {
-    action   = "deny(403)"
-    priority = "1002"
-    match {
-      expr {
-        expression = "request.headers['user-agent'].contains('bot') || request.headers['user-agent'].contains('crawler') || request.headers['user-agent'].contains('scanner')"
-      }
-    }
-    description = "Block suspicious user agents"
-  }
-
-  depends_on = [google_project_service.required_apis]
-}
-
-# Create Cloud Build trigger
-resource "google_cloudbuild_trigger" "web_app_trigger" {
-  name        = "web-app-trigger"
-  description = "Trigger for web application CI/CD pipeline"
-  filename    = "cloudbuild.yaml"
-
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
-    push {
-      branch = "^main$"
-    }
-  }
-
-  substitutions = {
-    _REGION                = var.region
-    _REPO_NAME            = google_artifact_registry_repository.web_app_repo.repository_id
-    _SERVICE_NAME         = google_cloud_run_v2_service.web_app.name
-    _SECURITY_POLICY_NAME = google_compute_security_policy.web_app_security.name
-    _BLOCKED_IP           = var.blocked_ip
-  }
-
-  service_account = google_service_account.cloud_build_sa.id
-
-  depends_on = [
-    google_project_service.required_apis,
-    google_service_account.cloud_build_sa,
-    google_artifact_registry_repository.web_app_repo
-  ]
-}
-
-# Create a load balancer to use Cloud Armor
-resource "google_compute_global_forwarding_rule" "web_app_forwarding_rule" {
-  name       = "web-app-forwarding-rule"
-  target     = google_compute_target_https_proxy.web_app_https_proxy.id
-  port_range = "443"
-  ip_address = google_compute_global_address.web_app_ip.address
-
-  depends_on = [google_project_service.required_apis]
 }
 
 # Create global IP address
@@ -277,23 +173,19 @@ resource "google_compute_global_address" "web_app_ip" {
   name = "web-app-ip"
 }
 
-# Create HTTPS proxy
-resource "google_compute_target_https_proxy" "web_app_https_proxy" {
-  name             = "web-app-https-proxy"
-  url_map          = google_compute_url_map.web_app_url_map.id
-  certificate_map  = google_certificate_manager_certificate_map.web_app_cert_map.id
+# Create HTTP proxy
+resource "google_compute_target_http_proxy" "web_app_http_proxy" {
+  name    = "web-app-http-proxy"
+  url_map = google_compute_url_map.web_app_url_map.id
 }
 
 # Create URL map
 resource "google_compute_url_map" "web_app_url_map" {
   name            = "web-app-url-map"
   default_service = google_compute_backend_service.web_app_backend.id
-
-  # Apply Cloud Armor security policy
-  security_policy = google_compute_security_policy.web_app_security.id
 }
 
-# Create backend service
+# Create backend service with Cloud Armor
 resource "google_compute_backend_service" "web_app_backend" {
   name        = "web-app-backend"
   protocol    = "HTTP"
@@ -308,6 +200,9 @@ resource "google_compute_backend_service" "web_app_backend" {
     enable      = true
     sample_rate = 1.0
   }
+
+  # Apply Cloud Armor security policy
+  security_policy = google_compute_security_policy.web_app_security.id
 }
 
 # Create network endpoint group
@@ -321,25 +216,40 @@ resource "google_compute_region_network_endpoint_group" "web_app_neg" {
   }
 }
 
-# Create managed SSL certificate
-resource "google_certificate_manager_certificate" "web_app_cert" {
-  name = "web-app-cert"
-  managed {
-    domains = ["${google_compute_global_address.web_app_ip.address}.nip.io"]
+# Create a simple HTTP load balancer with Cloud Armor
+resource "google_compute_global_forwarding_rule" "web_app_forwarding_rule" {
+  name       = "web-app-forwarding-rule"
+  target     = google_compute_target_http_proxy.web_app_http_proxy.id
+  port_range = "80"
+  ip_address = google_compute_global_address.web_app_ip.address
+}
+
+# Create Cloud Build trigger
+resource "google_cloudbuild_trigger" "web_app_trigger" {
+  name        = "github"
+  description = "Trigger for web application CI/CD pipeline"
+  filename    = "cloudbuild.yaml"
+
+  github {
+    owner = var.github_owner
+    name  = var.github_repo
+    push {
+      branch = "^main$"
+    }
   }
-}
 
-# Create certificate map
-resource "google_certificate_manager_certificate_map" "web_app_cert_map" {
-  name = "web-app-cert-map"
-}
+  substitutions = {
+    _REGION     = var.region
+    _REPO_NAME  = google_artifact_registry_repository.web_app_repo.repository_id
+    _SERVICE_NAME = google_cloud_run_v2_service.web_app.name
+  }
 
-# Create certificate map entry
-resource "google_certificate_manager_certificate_map_entry" "web_app_cert_entry" {
-  name     = "web-app-cert-entry"
-  map      = google_certificate_manager_certificate_map.web_app_cert_map.name
-  hostname = "${google_compute_global_address.web_app_ip.address}.nip.io"
-  certificates = [google_certificate_manager_certificate.web_app_cert.id]
+  service_account = google_service_account.cloud_build_sa.id
+
+  depends_on = [
+    google_service_account.cloud_build_sa,
+    google_artifact_registry_repository.web_app_repo
+  ]
 }
 
 # Outputs
@@ -354,8 +264,8 @@ output "load_balancer_ip" {
 }
 
 output "load_balancer_url" {
-  value = "https://${google_compute_global_address.web_app_ip.address}.nip.io"
-  description = "HTTPS URL of the load balancer with Cloud Armor"
+  value = "http://${google_compute_global_address.web_app_ip.address}"
+  description = "HTTP URL of the load balancer with Cloud Armor"
 }
 
 output "artifact_registry_url" {
