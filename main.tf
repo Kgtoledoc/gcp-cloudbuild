@@ -82,15 +82,15 @@ resource "google_project_iam_member" "cloud_build_permissions" {
   member  = "serviceAccount:${google_service_account.cloud_build_sa.email}"
 }
 
-# Create Cloud Run service (without image initially)
+# Create Cloud Run service with Artifact Registry image
 resource "google_cloud_run_v2_service" "web_app" {
   name     = "web-app"
   location = var.region
 
   template {
     containers {
-      # Use a placeholder image initially
-      image = "gcr.io/cloudrun/hello"
+      # Use Artifact Registry image
+      image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.web_app_repo.repository_id}/web-app:latest"
       
       ports {
         container_port = 8080
@@ -127,6 +127,10 @@ resource "google_cloud_run_v2_service" "web_app" {
     percent = 100
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
   }
+
+  depends_on = [
+    google_artifact_registry_repository.web_app_repo
+  ]
 }
 
 # Allow unauthenticated access to Cloud Run service
@@ -226,33 +230,33 @@ resource "google_compute_global_forwarding_rule" "web_app_forwarding_rule" {
 }
 
 # Create Cloud Build trigger
-# NOTE: Trigger created manually in Cloud Console using Developer Connect
-# resource "google_cloudbuild_trigger" "web_app_trigger" {
-#   name        = "github"
-#   description = "Trigger for web application CI/CD pipeline"
-#   filename    = "cloudbuild.yaml"
+resource "google_cloudbuild_trigger" "web_app_trigger" {
+  name        = "github-terraform"
+  description = "Trigger for web application CI/CD pipeline created with Terraform"
+  filename    = "cloudbuild.yaml"
+  location    = var.region
 
-#   github {
-#     owner = var.github_owner
-#     name  = var.github_repo
-#     push {
-#       branch = "^main$"
-#     }
-#   }
+  github {
+    owner = var.github_owner
+    name  = var.github_repo
+    push {
+      branch = "^main$"
+    }
+  }
 
-#   substitutions = {
-#     _REGION     = var.region
-#     _REPO_NAME  = google_artifact_registry_repository.web_app_repo.repository_id
-#     _SERVICE_NAME = google_cloud_run_v2_service.web_app.name
-#   }
+  substitutions = {
+    _REGION     = var.region
+    _REPO_NAME  = google_artifact_registry_repository.web_app_repo.repository_id
+    _SERVICE_NAME = google_cloud_run_v2_service.web_app.name
+  }
 
-#   service_account = google_service_account.cloud_build_sa.id
+  service_account = google_service_account.cloud_build_sa.id
 
-#   depends_on = [
-#     google_service_account.cloud_build_sa,
-#     google_artifact_registry_repository.web_app_repo
-#   ]
-# }
+  depends_on = [
+    google_service_account.cloud_build_sa,
+    google_artifact_registry_repository.web_app_repo
+  ]
+}
 
 # Outputs
 output "cloud_run_url" {
@@ -275,10 +279,10 @@ output "artifact_registry_url" {
   description = "URL of the Artifact Registry repository"
 }
 
-# output "cloud_build_trigger_id" {
-#   value = google_cloudbuild_trigger.web_app_trigger.id
-#   description = "ID of the Cloud Build trigger"
-# }
+output "cloud_build_trigger_id" {
+  value = google_cloudbuild_trigger.web_app_trigger.id
+  description = "ID of the Cloud Build trigger"
+}
 
 output "security_policy_name" {
   value = google_compute_security_policy.web_app_security.name
