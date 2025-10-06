@@ -73,7 +73,8 @@ resource "google_project_iam_member" "cloud_build_permissions" {
     "roles/run.admin",
     "roles/artifactregistry.writer",
     "roles/iam.serviceAccountUser",
-    "roles/compute.securityAdmin"
+    "roles/compute.securityAdmin",
+    "roles/logging.logWriter"
   ])
   
   project = var.project_id
@@ -225,32 +226,33 @@ resource "google_compute_global_forwarding_rule" "web_app_forwarding_rule" {
 }
 
 # Create Cloud Build trigger
-resource "google_cloudbuild_trigger" "web_app_trigger" {
-  name        = "github"
-  description = "Trigger for web application CI/CD pipeline"
-  filename    = "cloudbuild.yaml"
+# NOTE: Trigger created manually in Cloud Console using Developer Connect
+# resource "google_cloudbuild_trigger" "web_app_trigger" {
+#   name        = "github"
+#   description = "Trigger for web application CI/CD pipeline"
+#   filename    = "cloudbuild.yaml"
 
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
-    push {
-      branch = "^main$"
-    }
-  }
+#   github {
+#     owner = var.github_owner
+#     name  = var.github_repo
+#     push {
+#       branch = "^main$"
+#     }
+#   }
 
-  substitutions = {
-    _REGION     = var.region
-    _REPO_NAME  = google_artifact_registry_repository.web_app_repo.repository_id
-    _SERVICE_NAME = google_cloud_run_v2_service.web_app.name
-  }
+#   substitutions = {
+#     _REGION     = var.region
+#     _REPO_NAME  = google_artifact_registry_repository.web_app_repo.repository_id
+#     _SERVICE_NAME = google_cloud_run_v2_service.web_app.name
+#   }
 
-  service_account = google_service_account.cloud_build_sa.id
+#   service_account = google_service_account.cloud_build_sa.id
 
-  depends_on = [
-    google_service_account.cloud_build_sa,
-    google_artifact_registry_repository.web_app_repo
-  ]
-}
+#   depends_on = [
+#     google_service_account.cloud_build_sa,
+#     google_artifact_registry_repository.web_app_repo
+#   ]
+# }
 
 # Outputs
 output "cloud_run_url" {
@@ -273,10 +275,10 @@ output "artifact_registry_url" {
   description = "URL of the Artifact Registry repository"
 }
 
-output "cloud_build_trigger_id" {
-  value = google_cloudbuild_trigger.web_app_trigger.id
-  description = "ID of the Cloud Build trigger"
-}
+# output "cloud_build_trigger_id" {
+#   value = google_cloudbuild_trigger.web_app_trigger.id
+#   description = "ID of the Cloud Build trigger"
+# }
 
 output "security_policy_name" {
   value = google_compute_security_policy.web_app_security.name

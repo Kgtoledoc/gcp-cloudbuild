@@ -320,3 +320,5 @@ Este proyecto demuestra un pipeline completo de CI/CD en Google Cloud Platform c
 
 **🚀 El sistema está listo para producción y cumple con las mejores prácticas de seguridad y escalabilidad de GCP.**
 # Test commit for Cloud Build trigger
+# Test with logging permissions
+# Test manual trigger - Escenario 3
