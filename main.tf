@@ -90,8 +90,8 @@ resource "google_cloud_run_v2_service" "web_app" {
   template {
     containers {
       # Use Artifact Registry image
-      image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.web_app_repo.repository_id}/web-app:latest"
-      
+      #image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.web_app_repo.repository_id}/web-app:latest"
+      image = "gcr.io/cloudrun/hello"
       ports {
         container_port = 8080
       }
@@ -99,18 +99,8 @@ resource "google_cloud_run_v2_service" "web_app" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "1Gi"
+          memory = "512Mi"
         }
-      }
-      
-      env {
-        name  = "ENVIRONMENT"
-        value = "production"
-      }
-      
-      env {
-        name  = "VERSION"
-        value = "1.0.0"
       }
     }
     
@@ -118,9 +108,6 @@ resource "google_cloud_run_v2_service" "web_app" {
       min_instance_count = 0
       max_instance_count = 10
     }
-    
-    execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
-    session_affinity      = true
   }
 
   traffic {
