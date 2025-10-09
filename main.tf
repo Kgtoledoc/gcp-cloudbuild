@@ -90,8 +90,8 @@ resource "google_cloud_run_v2_service" "web_app" {
   template {
     containers {
       # Use Artifact Registry image
-      #image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.web_app_repo.repository_id}/web-app:latest"
-      image = "gcr.io/cloudrun/hello"
+      image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.web_app_repo.repository_id}/web-app:latest"
+      #image = "gcr.io/cloudrun/hello"
       ports {
         container_port = 8080
       }
